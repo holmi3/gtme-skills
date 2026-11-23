@@ -21,7 +21,7 @@ open output/ranked.html
 
 That rescores the 28 accounts, checks the 14 briefs and rebuilds the page.
 
-The page has a "Try other weights" panel. There's one slider per rule that adds points, plus the hot and warm cut-offs, and the list re-sorts as you drag. So when sales says "what if timing mattered more", you can show them in the meeting instead of promising a rerun. It starts at the model's own weights and changes nothing on disk. If a set of weights wins, the panel lists the exact model.json edits that give the same result; make them and rescore.
+The page has a "Try other weights" panel. There's one slider per rule that adds points, plus the hot and warm cut-offs, and the list re-sorts as you drag. So when sales says "what if timing mattered more", you can show them in the meeting instead of promising a rerun. It starts at the model's own weights and changes nothing on disk. If a set of weights wins, the panel lists the model.json values that give the same result (every changed point value, penalties left alone); make those edits and rescore.
 
 ## How it stays honest
 

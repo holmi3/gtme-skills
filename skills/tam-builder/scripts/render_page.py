@@ -15,7 +15,8 @@ The page also carries a closed "Try other weights" panel: one slider per rule th
 model's own weights, plus the hot and warm cut-offs. Moving a slider re-scores every row in the browser from that row's
 own rule points and re-sorts the list, and the panel lists the model.json edits that give the same result. It changes
 nothing on disk. Before adding it, the script re-scores every row with the
-model and checks it gets the parts, totals, bands and confidence on the file; if any row differs (an old model, or a different --as-of than the
+model and checks it gets the parts, totals,
+bands and confidence on the file; if any row differs (an old model, or a different --as-of than the
 scoring run used), the panel is left off and the script says why. --no-weights leaves it off on purpose.
 """
 import argparse, csv, html, json, re, sys
@@ -152,7 +153,7 @@ WTJS = r'''if(WT){(()=>{
 /* What-if weights. Each row carries its own points per rule (r.wt, from the model at render time). A slider sets the
    most points a rule can give; a row keeps its level on that rule and the slider scales it. Penalties stay fixed. Parts
    keep their caps (scaled with their sliders) and the total is scaled back to the model's usual maximum. */
-const $=id=>document.getElementById(id), r1=x=>Math.round(x*10)/10;
+const $=id=>document.getElementById(id), r1=x=>Math.round(x*10)/10, r3=x=>Math.round(x*1000)/1000;
 const DEF={},W={};WT.parts.forEach(p=>p.rules.forEach(x=>{DEF[x.id]=x.d}));
 const DTH=[WT.bands.hot,WT.bands.warm];let TH=DTH.slice(),cur="def";
 const resetW=()=>{for(const k in DEF)W[k]=DEF[k];TH=DTH.slice()};resetW();
@@ -190,7 +191,7 @@ box.innerHTML=`<div class="wt-pre" id="wtPre"><span class="l">Try:</span><button
  `<div class="wt-p"><h3>Bands<span id="wtN"></span></h3><label class="wt-s"><span>Hot from</span><output id="wtO0"></output><input type="range" min="1" max="${2*TOP}" id="wtTh0" aria-label="Hot from score"><small>model: ${DTH[0]}</small></label>`+
  `<label class="wt-s"><span>Warm from</span><output id="wtO1"></output><input type="range" min="0" max="${2*TOP}" id="wtTh1" aria-label="Warm from score"><small>model: ${DTH[1]}</small></label>`+
  `<p class="wt-note">Research rows stay research at any score, because something the model needs is still unread. Out rows stay out.</p><div class="k">Top 8 now</div><ol class="wt-top" id="wtTop"></ol></div></div>`+
- `<div class="wt-if" id="wtIf"><span><b>What-if view.</b> The list below uses these weights. Nothing on disk changes, and each row's receipt still shows the model's points.</span><button class="wt-b" type="button" id="wtReset">Back to model weights</button><details class="wt-ed"><summary>Same result in the model file</summary><ul id="wtEdit"></ul><p class="wt-note">Make these edits in model.json and rescore to get this ranking for real. Recency-weighted rules can differ by a rounding step.</p></details></div>`+
+ `<div class="wt-if" id="wtIf"><span><b>What-if view.</b> The list below uses these weights. Nothing on disk changes, and each row's receipt still shows the model's points.</span><button class="wt-b" type="button" id="wtReset">Back to model weights</button><details class="wt-ed"><summary>Same result in the model file</summary><ul id="wtEdit"></ul><p class="wt-note">Make these edits in model.json and rescore to get this ranking for real. Values are rounded to 3 decimals, so a total can differ by a rounding step.</p></details></div>`+
  `<p class="wt-note">Each slider sets the most points a rule can give. Each company keeps its level on that rule (for example its size band), and the slider scales it. A part's cap moves with its sliders, so totals can go above ${TOP}. Saved weights stay in this browser only.</p>`;
 box.querySelectorAll("input[data-k]").forEach(i=>i.addEventListener("input",()=>{W[i.dataset.k]=+i.value;cur="";update()}));
 [0,1].forEach(i=>$("wtTh"+i).addEventListener("input",()=>{TH[i]=+$("wtTh"+i).value;if(TH[1]>TH[0]){if(i===0)TH[1]=TH[0];else TH[0]=TH[1]}cur="";update()}));
@@ -217,8 +218,8 @@ function update(){rescore();const n=norm();
  $("wtN").textContent=DATA.length+" accounts";
  $("wtTop").innerHTML=DATA.slice(0,8).map((r,i)=>{const mv=ORANK[r.key]-(i+1);return `<li>${esc(r.company)} ${esc(r.total)} <span class="mv">${mv?(mv>0?"up "+mv:"down "+(-mv)):"same"}</span></li>`}).join("");
  box.querySelectorAll("button[data-p]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===cur));
- const ed=[];WT.parts.forEach(p=>{p.rules.forEach(x=>{if(W[x.id]!==x.d)ed.push(`${p.k} / ${x.label}: multiply its points by ${r1(W[x.id]/x.d)} (top ${x.d} becomes ${W[x.id]})`)});
-  const c=r1(cap(p));if(c!==p.max)ed.push(`${p.k}: max ${p.max} becomes ${c}`)});
+ const ed=[];WT.parts.forEach(p=>{p.rules.forEach(x=>{if(W[x.id]!==x.d)ed.push(`${p.k} / ${x.label}: `+x.pts.map(([w,v])=>`${w} ${v} to ${r3(v*W[x.id]/x.d)}`).join(", ")+(x.neg?" (negative values stay as they are)":""))});
+  const c=r3(cap(p));if(c!==p.max)ed.push(`${p.k}: max ${p.max} to ${c}`)});
  if(TH[0]!==DTH[0]||TH[1]!==DTH[1])ed.push(`bands: hot ${TH[0]}, warm ${TH[1]}`);
  $("wtEdit").innerHTML=ed.map(e=>`<li>${esc(e)}</li>`).join("");
  $("wtIf").classList.toggle("on",whatIf);chips();render()}
@@ -240,6 +241,21 @@ def rule_top(r):
     return 0
 
 
+def rule_points(r):
+    """[where, points] for every positive value of a rule: what a slider scales, named so a person can find it."""
+    t = r["type"]
+    if t == "map":
+        out = [[f'"{k}"', v] for k, v in r["points"].items() if v > 0]
+        return out + ([["default", r["default"]]] if r.get("default", 0) > 0 else [])
+    if t == "flag":
+        return [["points", r["points"]]]
+    if t in ("bands", "ratio"):
+        return [[f"step {s.get('min', '')}..{s.get('max', '')}", s["points"]] for s in r["steps"] if s["points"] > 0]
+    if t == "count_of":
+        return [["each", r["each"]], ["max", r.get("max", 99)]]
+    return []
+
+
 def rule_low(r):
     """The fewest points a rule can give (negative for a penalty)."""
     t = r["type"]
@@ -256,13 +272,14 @@ def rule_low(r):
 
 def weights_data(model, rows, p, as_of, store_key):
     """Per-rule points for every scored row, for the what-if panel. Returns ((spec, per_row), None) or (None, problem).
-    The panel is only built when the model reproduces every part on the file, so it never shows numbers that disagree
-    with the table."""
+    The panel is only built when the model reproduces every part, total, band and confidence on the file, so it never
+    shows numbers that disagree with the table."""
     parts, key = list(model["parts"]), model.get("key", "domain")
     spec = {"parts": [], "bands": model["bands"], "store": store_key}
     for k in parts:
         rules = model["parts"][k]["rules"]
-        sl = [{"id": f"{k}.{i}", "label": r.get("label", r.get("column", "")), "d": rule_top(r)}
+        sl = [{"id": f"{k}.{i}", "label": r.get("label", r.get("column", "")), "d": rule_top(r),
+               "pts": rule_points(r), "neg": rule_low(r) < 0}
               for i, r in enumerate(rules) if rule_top(r) > 0]
         fixed = any(rule_low(r) < 0 for r in rules)
         spec["parts"].append({"k": k, "max": model["parts"][k]["max"], "rules": sl, "fixed": fixed})
