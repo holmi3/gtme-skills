@@ -14,10 +14,9 @@ and which mode opens first. Without it the page uses a neutral built-in look. Ei
 The page also carries a closed "Try other weights" panel: one slider per rule that adds points, starting at the
 model's own weights, plus the hot and warm cut-offs. Moving a slider re-scores every row in the browser from that row's
 own rule points and re-sorts the list, and the panel lists the model.json edits that give the same result. It changes
-nothing on disk. Before adding it, the script re-scores every row with the
-model and checks it gets the parts, totals,
-bands and confidence on the file; if any row differs (an old model, or a different --as-of than the
-scoring run used), the panel is left off and the script says why. --no-weights leaves it off on purpose.
+nothing on disk. Before adding it, the script re-scores every row with the model and checks it gets the parts, totals,
+bands and confidence on the file. If any row differs (an old model, or a different --as-of than the scoring run used),
+the panel is left off and the script says why. --no-weights leaves it off on purpose.
 """
 import argparse, csv, html, json, re, sys
 from pathlib import Path
@@ -152,7 +151,7 @@ mb.onclick=()=>{root.dataset.theme=isDark()?"light":"dark";label()};label();
 WTJS = r'''if(WT){(()=>{
 /* What-if weights. Each row carries its own points per rule (r.wt, from the model at render time). A slider sets the
    most points a rule can give; a row keeps its level on that rule and the slider scales it. Penalties stay fixed. Parts
-   keep their caps (scaled with their sliders) and the total is scaled back to the model's usual maximum. */
+   keep their caps, scaled with their sliders, and totals are not rescaled. */
 const $=id=>document.getElementById(id), r1=x=>Math.round(x*10)/10, r3=x=>Math.round(x*1000)/1000;
 const DEF={},W={};WT.parts.forEach(p=>p.rules.forEach(x=>{DEF[x.id]=x.d}));
 const DTH=[WT.bands.hot,WT.bands.warm];let TH=DTH.slice(),cur="def";

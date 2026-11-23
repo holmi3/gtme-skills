@@ -62,7 +62,7 @@ document.getElementById("q").oninput=e=>{q=e.target.value;render()};
 if(WT){(()=>{
 /* What-if weights. Each row carries its own points per rule (r.wt, from the model at render time). A slider sets the
    most points a rule can give; a row keeps its level on that rule and the slider scales it. Penalties stay fixed. Parts
-   keep their caps (scaled with their sliders) and the total is scaled back to the model's usual maximum. */
+   keep their caps, scaled with their sliders, and totals are not rescaled. */
 const $=id=>document.getElementById(id), r1=x=>Math.round(x*10)/10, r3=x=>Math.round(x*1000)/1000;
 const DEF={},W={};WT.parts.forEach(p=>p.rules.forEach(x=>{DEF[x.id]=x.d}));
 const DTH=[WT.bands.hot,WT.bands.warm];let TH=DTH.slice(),cur="def";
