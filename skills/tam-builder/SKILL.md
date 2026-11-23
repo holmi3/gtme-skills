@@ -71,7 +71,7 @@ For hot and warm rows only:
 The owner is a title, never a person, and every owner basis that rests on judgment ends `[assumption]`.
 
 ## Stage 6: ranked page in the client's look
-`python scripts/render_page.py --model model.json --file accounts.csv --evidence evidence.csv --out ranked.html --title "..." --theme theme.json`. One self-contained file: band tiles that filter, search, the ranked table, and per account the brief, the owner, a receipt for every point and the sources. With the stage 0 theme it uses the client's colors, font and corners, says "Prepared for <Client>", opens in the site's own mode, and has a Light / Dark switch; every color pair has passed a contrast check. Open it next to the client's homepage and compare before anyone else sees it (`references/client-theme.md`). Readability for sales matters more than completeness: bands with plain definitions, a legend, the brief first, numbers second.
+`python scripts/render_page.py --model model.json --file accounts.csv --evidence evidence.csv --out ranked.html --title "..." --theme theme.json --as-of <the date score.py used>`. One self-contained file: band tiles that filter, search, the ranked table, and per account the brief, the owner, a receipt for every point and the sources. It also carries a closed "Try other weights" panel: a slider per rule that adds points (starting at the model's weights) and the hot and warm cut-offs, which re-score and re-sort the list in the browser, for talking through weights with the owner. Nothing on disk changes. The panel lists the model.json edits that reproduce a what-if ranking; ones the owner wants go into the model file and back through stage 4. The script only adds the panel when the model reproduces every part, total, band and confidence on the file, so pass the same `--as-of` as the scoring run; otherwise it leaves the panel out and says why (`--no-weights` leaves it out on purpose). With the stage 0 theme it uses the client's colors, font and corners, says "Prepared for <Client>", opens in the site's own mode, and has a Light / Dark switch; every color pair has passed a contrast check. Open it next to the client's homepage and compare before anyone else sees it (`references/client-theme.md`). Readability for sales matters more than completeness: bands with plain definitions, a legend, the brief first, numbers second.
 
 The theme is for a page made for that client. Do not publish a page that imitates a company to anyone else, and leave the logo out unless the client provides it.
 
@@ -96,7 +96,7 @@ Rerunning is cheap by design: change a weight and rerun stage 4 onward. Re-pull 
 | `scripts/score.py` | the scorer: JSON model in, S<n>- column sets out, `--next`, `--groups`, `--test`, `--check` |
 | `scripts/brief_facts.py` | fact packs and likely owner for hot and warm rows |
 | `scripts/check_briefs.py` | holds every brief to its pack; `--apply` writes briefs onto the list |
-| `scripts/render_page.py` | the ranked page, with `--theme` for the client's look |
+| `scripts/render_page.py` | the ranked page, with `--theme` for the client's look and a what-if weights panel |
 | `references/context-from-website.md` | stage 0: the context layer and theme from the client's website |
 | `references/page-extraction-prompt.md` | the prompt that turns saved pages into checked facts |
 | `references/client-theme.md` | reading the client's look and checking the page against it |

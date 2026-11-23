@@ -17,7 +17,7 @@ Python 3.8 or newer, standard library only. It rebuilds everything in `output/` 
 | Tune | `model_v1.json` to `model_v3.json`, `output/test_set.csv`, `iterations.md` | S1 fails because big consumer contact centers score like strong fits; S2 adds the product's ceiling; S3 raises the consumer penalty and passes the stop rule |
 | Score | `output/accounts.csv` | the accepted model on all 28 rows: hot 6, warm 8, cold 8, research 3, out 3 |
 | Briefs | `output/facts.jsonl`, `briefs.csv` | 14 fact packs for hot and warm rows, and the 14 briefs written from them; `check_briefs.py` holds every number to its pack |
-| Page | `output/ranked.html` | open from disk, in Relaydesk's colors and font; click a band tile to filter, a row for the brief, owner, receipts and sources; the button top right switches light and dark |
+| Page | `output/ranked.html` | open from disk, in Relaydesk's colors and font; click a band tile to filter, a row for the brief, owner, receipts and sources; the button top right switches light and dark; "Try other weights" above the tiles re-sorts the list as you move the sliders |
 
 ## Try breaking it
 - Change one word inside a quote in `input/extractions.csv` and rerun: that line is rejected and its fact never reaches the list.
