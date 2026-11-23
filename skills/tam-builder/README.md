@@ -21,6 +21,8 @@ open output/ranked.html
 
 That rescores the 28 accounts, checks the 14 briefs and rebuilds the page.
 
+The page has a "Try other weights" panel. There's one slider per scoring rule plus the hot and warm cut-offs, and the list re-sorts as you drag. So when sales says "what if timing mattered more", you can show them in the meeting instead of promising a rerun. It starts at the model's own weights and changes nothing on disk. If a set of weights wins, put it in the model file and rescore.
+
 ## How it stays honest
 
 A model (or a person) reads each page and pulls out a value with a word for word quote. A script checks that the quote is on the saved page before it counts, and another script does the scoring, so changing a weight is a one line edit and a rerun. It reads public pages politely (robots.txt, a pause between requests, nothing behind a login) and never puts people's names in the list.

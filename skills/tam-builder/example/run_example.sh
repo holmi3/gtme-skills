@@ -39,4 +39,4 @@ rm -f output/accounts.csv.bak
 #    in a browser, brand_theme.py turns that into colors for a light and a dark page. Relaydesk's homepage is invented,
 #    so its probe is a saved file here.
 python3 $S/brand_theme.py --probe input/homepage_probe.json --client "Relaydesk" --out output/theme.json
-python3 $S/render_page.py --model model_v3.json --file output/accounts.csv --evidence output/evidence.csv --out output/ranked.html --title "Relaydesk target accounts (invented example)" --theme output/theme.json
+python3 $S/render_page.py --model model_v3.json --file output/accounts.csv --evidence output/evidence.csv --out output/ranked.html --title "Relaydesk target accounts (invented example)" --theme output/theme.json --as-of $AS_OF
