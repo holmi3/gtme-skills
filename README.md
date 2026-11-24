@@ -1,4 +1,4 @@
-# GTM engineering skills
+# GTM Engineering skills
 
 These are skills I built and ran for go-to-market work, cleaned up so anyone can use them. There's no real data in these copies (the examples use made up companies on `.example` domains).
 
