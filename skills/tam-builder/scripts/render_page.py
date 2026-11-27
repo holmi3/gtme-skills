@@ -18,10 +18,12 @@ nothing on disk. Before adding it, the script re-scores every row with the model
 bands and confidence on the file. If any row differs (an old model, or a different --as-of than the scoring run used),
 the panel is left off and the script says why. --no-weights leaves it off on purpose.
 
-"All signals" is a closed section in every open row, built from --evidence (the file apply_evidence.py writes). It
-lists each fact that was found, with its confidence, the date it was read, the quote and a link to the page, and
-then what was checked with nothing found (a none_found or no value, which carries a "[checked] ..." note). The link
-text is only the site name. A "[checked] ..." note shows as what was read, never as a quote. Its top line counts what it lists.
+"All signals" is added when --evidence is passed (the file apply_evidence.py writes). In an open row, an account with
+evidence lines gets a closed section that lists each fact found, with its confidence, the date it was read, the quote
+and a link to the page, then what was checked with nothing found (a none_found or no value, which carries a
+"[checked] ..." note) and what is still unknown. An account with no lines gets one sentence saying so. Field and value
+names use the model's plain words (brief.fields and brief.value_labels) where it has them. The link text is only the
+site name. A "[checked] ..." note shows as what was read, never as a quote. The top line counts what the section lists.
 """
 import argparse, csv, html, json, re, sys
 from pathlib import Path
@@ -136,23 +138,29 @@ __PANEL__<div class="tiles" id="tiles"></div>
 <footer>__FOOT__</footer>
 </main>
 <script>
-const DATA = __DATA__; const PARTS = __PARTS__; const WT = __WT__;
+const DATA = __DATA__; const PARTS = __PARTS__; const WT = __WT__; const SIG = __SIG__;
 let band = null, q = "", open = null, whatIf = false, wasOf = () => "", delta = () => "";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-/* All signals: every evidence line for the open account. Found facts first, then what was checked with nothing found.
-   The link text is the site name. The top line counts what the section lists. */
+/* All signals: every evidence line for the open account. Found facts first, then what was checked with nothing found,
+   then what was read but is still unknown. Labels are the model's own plain words where it has them. The link text is
+   the site name. The top line counts what the section lists. SIG is null when no evidence file was passed. */
 const sigOpen = new Set();
-const sigLabel = f => String(f ?? "").replace(/_/g, " ");
-const sigKind = e => e.value === "none_found" || e.value === "no" ? "none" : "found";
+const sigVal = e => String(e.value ?? "").trim().toLowerCase();
+const sigKind = e => {const v = sigVal(e); return v === "none_found" || v === "no" ? "none" : v === "unknown" ? "unknown" : "found"};
+const sigPlain = s => String(s ?? "").replace(/_/g, " ");
+const sigOwn = (o, k) => o && Object.prototype.hasOwnProperty.call(o, k) && typeof o[k] !== "object" ? String(o[k]) : "";
+const sigLabel = e => sigOwn(SIG.fields, e.field) || sigPlain(e.field);
+const sigValue = e => sigOwn(Object.prototype.hasOwnProperty.call(SIG.values, e.field) ? SIG.values[e.field] : null, e.value) || sigPlain(e.value);
 const sigChecked = q => String(q ?? "").startsWith("[checked]");
 const sigRead = q => sigChecked(q) ? String(q).slice(9).trim() : "";
+const sigMeta = e => [e.confidence ? e.confidence + " confidence" : "", e.read_on ? "read " + e.read_on : ""].filter(Boolean).join(", ");
 function sigLink(u){try{const x=new URL(u);if(x.protocol!=="http:"&&x.protocol!=="https:")return "";return `<a href="${esc(x.href)}" target="_blank" rel="noopener noreferrer">${esc(x.hostname.replace(/^www[.]/,""))}</a>`}catch(e){return ""}}
-function signals(r){const E=r.evidence||[];if(!E.length)return `<div class="k">All signals</div><p>No page evidence is on file for this account. Its score rests on the list columns in the receipt above.</p>`;
- const f=E.filter(e=>sigKind(e)==="found"),n=E.filter(e=>sigKind(e)==="none");
- const sum=[f.length?`${f.length} found`:"none found",n.length?`${n.length} checked, nothing found`:""].filter(Boolean).join(" · ");
- const item=e=>`<li><b>${esc(sigLabel(e.field))}</b>${e.value&&e.value!=="yes"?": "+esc(sigLabel(e.value)):""} <span class="sg-m">${esc([e.confidence?e.confidence+" confidence":"",e.read_on?"read "+e.read_on:""].filter(Boolean).join(", "))}</span>${e.quote?(sigChecked(e.quote)?`<div class="sg-q">What was read: ${esc(sigRead(e.quote))}</div>`:`<div class="sg-q">&ldquo;${esc(e.quote)}&rdquo;</div>`):""}${sigLink(e.url)}</li>`;
- const miss=e=>`<li><b>${esc(sigLabel(e.field))}</b> <span class="sg-m">${esc(sigRead(e.quote)||"Checked, nothing found.")}</span> ${sigLink(e.url)}</li>`;
- return `<details class="sg"${sigOpen.has(r.key)?" open":""}><summary>All signals<small>${esc(sum)}</small></summary>`+(f.length?`<ul class="sg-l">${f.map(item).join("")}</ul>`:"")+(n.length?`<div class="k">Checked, nothing found</div><ul class="sg-l">${n.map(miss).join("")}</ul>`:"")+`</details>`}
+function signals(r){if(!SIG)return "";const E=r.evidence||[];if(!E.length)return `<div class="k">All signals</div><p>No page quotes are saved for this account.</p>`;
+ const f=E.filter(e=>sigKind(e)==="found"),n=E.filter(e=>sigKind(e)==="none"),u=E.filter(e=>sigKind(e)==="unknown");
+ const sum=[f.length?`${f.length} found`:"",n.length?`${n.length} checked, nothing found`:"",u.length?`${u.length} still unknown`:""].filter(Boolean).join(" · ");
+ const item=e=>`<li><b>${esc(sigLabel(e))}</b>${sigVal(e)&&sigVal(e)!=="yes"?": "+esc(sigValue(e)):""} <span class="sg-m">${esc(sigMeta(e))}</span>${e.quote?(sigChecked(e.quote)?`<div class="sg-q">What was read: ${esc(sigRead(e.quote))}</div>`:`<div class="sg-q">&ldquo;${esc(e.quote)}&rdquo;</div>`):""}${sigLink(e.url)}</li>`;
+ const miss=e=>`<li><b>${esc(sigLabel(e))}</b>: ${esc(sigRead(e.quote)||(sigKind(e)==="unknown"?"Read, but the page does not say.":"Checked, nothing found."))} <span class="sg-m">${esc(sigMeta(e))}</span> ${sigLink(e.url)}</li>`;
+ return `<details class="sg"${sigOpen.has(r.key)?" open":""}><summary>All signals<small>${esc(sum)}</small></summary>`+(f.length?`<ul class="sg-l">${f.map(item).join("")}</ul>`:"")+(n.length?`<div class="k">Checked, nothing found</div><ul class="sg-l">${n.map(miss).join("")}</ul>`:"")+(u.length?`<div class="k">Still unknown</div><ul class="sg-l">${u.map(miss).join("")}</ul>`:"")+`</details>`}
 function tiles(){const t=document.getElementById("tiles");t.innerHTML="";for(const [b,label] of __BANDS__){const n=DATA.filter(r=>r.band===b).length;const el=document.createElement("button");el.className="tile";el.setAttribute("aria-pressed",band===b);el.innerHTML=`<b>${n}${whatIf?delta(b,n):""}</b><span class="chip ${b}">${b}</span><span class="l">${esc(label)}</span>`;el.onclick=()=>{band=band===b?null:b;render()};t.appendChild(el)}}
 function render(){tiles();const tb=document.getElementById("tb");tb.innerHTML="";const ql=q.toLowerCase();let i=0;
  for(const r of DATA){if(band&&r.band!==band)continue;if(ql&&!(r.company+r.key+r.owner+r.brief).toLowerCase().includes(ql))continue;i++;
@@ -357,10 +365,12 @@ def main():
     if not sets:
         sys.exit("no scored set on the file; run score.py --write first")
     p = f"S{sets[-1]}-"
-    ev = {}
+    ev, sig_spec = {}, None  # sig_spec: the model's plain words for "All signals"; None leaves the section out
     if a.evidence:
         for e in csv.DictReader(open(a.evidence, newline="", encoding="utf-8")):
             ev.setdefault(e[key], []).append(e)
+        brief = model.get("brief") or {}
+        sig_spec = {"fields": brief.get("fields") or {}, "values": brief.get("value_labels") or {}}
     order = {b: i for i, (b, _) in enumerate(BANDS)}
     data = []
     for r in rows:
@@ -393,7 +403,7 @@ def main():
               "<tr><td><span class='chip research'>research</span></td><td>low confidence: no page read yet, or too little data</td><td>not handed over until a page is read</td></tr>"
               "<tr><td><span class='chip out'>out</span></td><td>disqualified (anti-ICP, customer, partner, competitor)</td><td>kept so nobody researches it again</td></tr></table>"
               "<p>Each part has a maximum: " + ", ".join(f"{x} {model['parts'][x]['max']}" for x in parts) +
-              ". Fit and prize come from what the company is; the other parts only rank within that. Click any row for the brief, the receipt behind every point, and All signals: every fact found on a public page, with its source.</p>")
+              ". Fit and prize come from what the company is; the other parts only rank within that. Click any row for the brief and the receipt behind every point" + (", and All signals: every fact found on a public page, with its source" if sig_spec else "") + ".</p>")
     sub = f"{len(rows)} accounts, scored by {model.get('name', 'the model')}"
     foot = "Built from public sources. Every point has a receipt; click a row to see it."
     if theme and theme.get("client"):
@@ -411,6 +421,7 @@ def main():
            .replace("__PANEL__", PANEL if wt_spec else "")
            .replace("__WTJS__", WTJS if wt_spec else "")
            .replace("__WT__", json.dumps(wt_spec).replace("</", "<\\/"))
+           .replace("__SIG__", json.dumps(sig_spec, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/")))
     Path(a.out).write_text(out, encoding="utf-8")
     print(f"wrote {a.out} ({len(data)} accounts, {'theme for ' + str(theme.get('client')) if theme else 'built-in look'}; "
